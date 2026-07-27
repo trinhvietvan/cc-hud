@@ -16,7 +16,7 @@ function makeData(overrides: Partial<RenderData> = {}): RenderData {
     sevenDayPercent: null,
     fiveHourResetsAt: null,
     sevenDayResetsAt: null,
-    planTier: null,
+    thinkingDepth: null,
     topModel: null,
     extra: null,
     ...overrides,
@@ -179,12 +179,17 @@ describe('render', () => {
     assert.match(out, /\[DeepSeek V4 Pro\]/);
   });
 
-  it('shows plan tier inside model brackets', () => {
-    const out = strip(render(makeData({ planTier: 'Max5x' })));
-    assert.match(out, /\[Opus · Max5x\]/);
+  it('shows thinking depth inside model brackets', () => {
+    const out = strip(render(makeData({ thinkingDepth: 'high' })));
+    assert.match(out, /\[Opus · High\]/);
   });
 
-  it('omits tier dot when planTier is null', () => {
+  it('capitalizes xhigh as XHigh', () => {
+    const out = strip(render(makeData({ thinkingDepth: 'xhigh' })));
+    assert.match(out, /\[Opus · XHigh\]/);
+  });
+
+  it('omits depth dot when thinkingDepth is null', () => {
     const out = strip(render(makeData()));
     assert.match(out, /\[Opus\]/);
     assert.ok(!out.includes('·'));

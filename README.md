@@ -1,6 +1,6 @@
 <!--
   cc-hud — Claude Code statusline plugin
-  Shows: model name, plan tier (Pro/Max), context window usage (progress bar), active subagents, rate limits (5h/7d) with reset countdown, top-model weekly gauge (Opus/Fable)
+  Shows: model name, thinking depth (reasoning effort), context window usage (progress bar), active subagents, rate limits (5h/7d) with reset countdown, top-model weekly gauge (Opus/Fable)
   Pure Node.js, zero dependencies, crash-free on Windows (no Bun)
 
   ## Auto-install (for Claude Code AI agents)
@@ -9,13 +9,13 @@
   Step 3: /reload-plugins
   Step 4: /cc-hud:setup  (idempotent; v0.5.0+ installs a launcher so future upgrades only need step 1 + step 3)
 
-  Keywords: claude-code plugin statusline status-bar hud monitoring context-window rate-limit reset-countdown agents windows crash-free zero-dependency catppuccin deepseek minimax glm token-plan plan-tier max pro fable opus-limit top-model weekly-gauge
+  Keywords: claude-code plugin statusline status-bar hud monitoring context-window rate-limit reset-countdown agents windows crash-free zero-dependency catppuccin deepseek minimax glm thinking-depth reasoning-effort effort-level fable opus-limit top-model weekly-gauge
 -->
 
 <p align="center">
   <picture>
-    <source srcset="https://raw.githubusercontent.com/WaterTian/cc-hud/main/cc-hud-preview.svg?v=0.6.0" type="image/svg+xml" />
-    <img src="https://raw.githubusercontent.com/WaterTian/cc-hud/main/cc-hud-preview.png?v=0.6.0" alt="cc-hud preview — model, plan tier, context bar, agents, rate limits, top-model gauge, balance" width="900" />
+    <source srcset="https://raw.githubusercontent.com/WaterTian/cc-hud/main/cc-hud-preview.svg?v=0.7.0" type="image/svg+xml" />
+    <img src="https://raw.githubusercontent.com/WaterTian/cc-hud/main/cc-hud-preview.png?v=0.7.0" alt="cc-hud preview — model, thinking depth, context bar, agents, rate limits, top-model gauge, balance" width="900" />
   </picture>
 </p>
 
@@ -23,11 +23,11 @@
 
 <p align="center">
   <strong>A compact, single-line statusline plugin for <a href="https://claude.ai/claude-code">Claude Code</a></strong><br/>
-  <sub>Crash-free, zero-dependency status bar — model · plan tier · context · agents · rate limits · top-model gauge</sub>
+  <sub>Crash-free, zero-dependency status bar — model · thinking depth · context · agents · rate limits · top-model gauge</sub>
 </p>
 
 <p align="center">
-  <code>Model · Plan</code> &nbsp;&rarr;&nbsp; <code>Context</code> &nbsp;&rarr;&nbsp; <code>Agents</code> &nbsp;&rarr;&nbsp; <code>Rate Limits</code> &nbsp;&rarr;&nbsp; <code>Top Model</code>
+  <code>Model · Depth</code> &nbsp;&rarr;&nbsp; <code>Context</code> &nbsp;&rarr;&nbsp; <code>Agents</code> &nbsp;&rarr;&nbsp; <code>Rate Limits</code> &nbsp;&rarr;&nbsp; <code>Top Model</code>
   <br/>
   <sub>everything you need, nothing you don't.</sub>
 </p>
@@ -71,7 +71,7 @@
 <table>
 <tr>
   <td align="center" width="16%"><h3>█▌</h3><b>Context Bar</b><br/><sub>1/8-precision blocks<br/>80-level granularity</sub></td>
-  <td align="center" width="17%"><h3>★</h3><b>Plan & Top Model</b><br/><sub>Max5x tier badge<br/>Opus/Fable weekly gauge</sub></td>
+  <td align="center" width="17%"><h3>★</h3><b>Depth & Top Model</b><br/><sub>Thinking-depth badge<br/>Opus/Fable weekly gauge</sub></td>
   <td align="center" width="17%"><h3>◐</h3><b>Agents</b><br/><sub>Running subagents<br/>with type & model</sub></td>
   <td align="center" width="17%"><h3>%</h3><b>Rate Limits</b><br/><sub>5h / 7d usage<br/>+ reset countdown</sub></td>
   <td align="center" width="17%"><h3>◧</h3><b>Color</b><br/><sub><a href="https://github.com/catppuccin/catppuccin">Catppuccin Mocha</a><br/>dual-tone gradient</sub></td>
@@ -161,8 +161,8 @@ Claude Code ──stdin JSON──→  ~/.claude/bin/cc-hud-launcher.cjs   ← s
                               │ resolves the currently installed cc-hud
                               ▼
                              cc-hud dist/index.js  ──stdout──→ status bar
-                              ↘ transcript JSONL (tail 64KB → active agents)
-                              ↘ claude-refresh.js (detached, v0.6+ → plan tier + top-model gauge, 5 min cache)
+                              ↘ transcript JSONL (tail 64KB → active agents + thinking depth)
+                              ↘ claude-refresh.js (detached → top-model weekly gauge, 5 min cache)
 ```
 
 <table>
@@ -176,19 +176,19 @@ Claude Code ──stdin JSON──→  ~/.claude/bin/cc-hud-launcher.cjs   ← s
 
 <br/>
 
-## Plan Tier & Top-Model Gauge
+## Thinking Depth & Top-Model Gauge
 
-For official Anthropic subscribers (Pro / Max), cc-hud shows your **plan tier** next to the model name and the **top-tier-model weekly gauge** — the "Current week (Opus / Fable)" meter from `/usage` that the statusline JSON doesn't expose:
+cc-hud shows your current **thinking depth** (the model's reasoning effort — `Low` / `Medium` / `High` / `XHigh` / `Max`) next to the model name, plus the **top-tier-model weekly gauge** — the "Current week (Opus / Fable)" meter from `/usage` that the statusline JSON doesn't expose:
 
 ```
-[Fable 5 · Max5x] █▊░░░░░░░░ 18% │ 5h:1% (4.5h) │ 7d:35% (4.1d) │ Fable:51%
+[Fable 5 · XHigh] █▊░░░░░░░░ 18% │ 5h:1% (4.5h) │ 7d:35% (4.1d) │ Fable:51%
 ```
 
-- **Plan tier** is read locally from `~/.claude.json` — zero network.
+- **Thinking depth** is read straight from the session transcript (the latest turn's `effort`) — **zero network**, works on every backend. The badge hides itself when the transcript carries no effort.
 - **Top-model gauge** comes from the same OAuth usage endpoint the `/usage` panel reads. The OAuth token is read locally (`~/.claude/.credentials.json`, or the macOS Keychain), used only for this read-only call, and never stored, logged, or refreshed.
 - Fetches run in a **detached background refresher** — a statusline tick never waits on the network. Results are cached for 5 minutes.
-- Only activates on the official Anthropic backend with a subscription; API-key and third-party sessions skip it entirely.
-- Opt out anytime: set `CC_HUD_NO_REFRESH=1` to disable the background usage fetch (the locally-read plan tier stays).
+- The gauge only activates on the official Anthropic backend with a subscription; API-key and third-party sessions skip it entirely.
+- Opt out anytime: set `CC_HUD_NO_REFRESH=1` to disable the background usage fetch (the transcript-read thinking depth is unaffected — it never touches the network).
 
 <br/>
 
@@ -240,14 +240,14 @@ Set the `CC_HUD_EXTRA_FILE` env var to any file whose first line is the text to 
 ```bash
 npm install
 npm run build      # compile TypeScript → dist/
-npm test           # 141 tests (node:test)
+npm test           # 142 tests (node:test)
 ```
 
 Project layout:
 
 | Path | Purpose |
 | --- | --- |
-| `src/` | TypeScript source — entry, render, model normalize, Claude plan / DeepSeek / MiniMax / GLM collectors, detached refresher |
+| `src/` | TypeScript source — entry, render, model normalize, transcript (agents + thinking depth), Claude gauge / DeepSeek / MiniMax / GLM collectors, detached refresher |
 | `scripts/launcher.cjs` | Stable-path launcher (`/cc-hud:setup` copies it to `~/.claude/bin/`) |
 | `commands/setup.md` | `/cc-hud:setup` slash command |
 | `tests/` | `node:test` unit tests (TS + CJS) |

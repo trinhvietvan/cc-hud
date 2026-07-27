@@ -30,6 +30,14 @@ function color(percent: number): string {
   return RED;
 }
 
+// Reasoning effort ("思考深度") — capitalize the raw level for display.
+const EFFORT_LABELS: Record<string, string> = {
+  low: 'Low', medium: 'Medium', high: 'High', xhigh: 'XHigh', max: 'Max',
+};
+function effortLabel(raw: string): string {
+  return EFFORT_LABELS[raw] ?? raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
 function progressBar(percent: number | null): string {
   // null = current_usage not yet populated (start of session or just after /compact)
   // — render an empty track + dim em-dash so it doesn't look like context reset.
@@ -105,8 +113,8 @@ export function render(data: RenderData): string {
 
   // Model + context bar (variant suffix lives here — it describes context capacity)
   const variant = data.modelVariant ? ` ${OVERLAY}(${data.modelVariant})${RESET}` : '';
-  const tier = data.planTier ? ` ${OVERLAY}· ${data.planTier}${RESET}` : '';
-  segments.push(`${OVERLAY}[${RESET}${BLUE}${data.model}${RESET}${tier}${OVERLAY}]${RESET} ${progressBar(data.contextPercent)}${variant}`);
+  const depth = data.thinkingDepth ? ` ${OVERLAY}· ${effortLabel(data.thinkingDepth)}${RESET}` : '';
+  segments.push(`${OVERLAY}[${RESET}${BLUE}${data.model}${RESET}${depth}${OVERLAY}]${RESET} ${progressBar(data.contextPercent)}${variant}`);
 
   // Agents (if any)
   const agentStr = agentSegment(data.agents);

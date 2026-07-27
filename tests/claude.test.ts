@@ -46,8 +46,9 @@ describe('claude plan', () => {
     }));
   }
 
-  function writeClaudeJson(oauthAccount: Record<string, unknown> | undefined): void {
-    writeFileSync(join(tmpHome, '.claude.json'), JSON.stringify({ oauthAccount }));
+  function seedCache(payload: unknown, ts = Date.now()): void {
+    mkdirSync(join(tmpHome, '.cache', 'cc-hud'), { recursive: true });
+    writeFileSync(cachePath(), JSON.stringify({ payload, ts }));
   }
 
   beforeEach(() => {
@@ -107,7 +108,6 @@ describe('claude plan', () => {
     });
 
     it('returns null without rate limits (API-key session)', async () => {
-      writeClaudeJson({ organizationRateLimitTier: 'default_claude_max_5x' });
       const { getClaudePlan } = await importClaude();
       assert.equal(await getClaudePlan(false), null);
     });
@@ -122,10 +122,10 @@ describe('claude plan', () => {
 
     it('activates when ANTHROPIC_BASE_URL points at api.anthropic.com', async () => {
       process.env.ANTHROPIC_BASE_URL = 'https://api.anthropic.com';
-      writeClaudeJson({ organizationRateLimitTier: 'default_claude_max_5x' });
+      const payload = { topModel: { name: 'Fable', percent: 46, resetsAt: null } };
+      seedCache(payload);
       const { getClaudePlan } = await importClaude();
-      const result = await getClaudePlan(true);
-      assert.equal(result?.tier, 'Max5x');
+      assert.deepEqual(await getClaudePlan(true), payload);
     });
   });
 
@@ -134,102 +134,42 @@ describe('claude plan', () => {
   describe('tick path', () => {
     it('never fetches inline, even with a valid token and no cache', async () => {
       writeCreds();
-      writeClaudeJson({ organizationRateLimitTier: 'default_claude_max_5x' });
       const { getClaudePlan } = await importClaude();
       await getClaudePlan(true);
       assert.equal(fetchCalls.length, 0);
     });
 
-    it('serves tier from ~/.claude.json on first run (gauge arrives via refresh)', async () => {
-      writeClaudeJson({ organizationRateLimitTier: 'default_claude_max_5x' });
-      const { getClaudePlan } = await importClaude();
-      const result = await getClaudePlan(true);
-      assert.equal(result!.tier, 'Max5x');
-      assert.equal(result!.topModel, null);
-    });
-
-    it('parses ~/.claude.json once, then serves the placeholder from cache', async () => {
-      writeClaudeJson({ organizationRateLimitTier: 'default_claude_max_5x' });
-      const { getClaudePlan } = await importClaude();
-      await getClaudePlan(true);
-      // Corrupt the source file — a cached tick must not re-read it
-      writeFileSync(join(tmpHome, '.claude.json'), 'corrupted{');
-      const result = await getClaudePlan(true);
-      assert.equal(result!.tier, 'Max5x');
-    });
-
-    it('returns null when nothing is known at all', async () => {
+    it('returns null on first run, before the gauge arrives via refresh', async () => {
       const { getClaudePlan } = await importClaude();
       assert.equal(await getClaudePlan(true), null);
     });
 
-    it('survives malformed ~/.claude.json', async () => {
-      writeFileSync(join(tmpHome, '.claude.json'), 'not json{');
+    it('serves a fresh cached gauge without touching the network', async () => {
+      const payload = { topModel: { name: 'Fable', percent: 46, resetsAt: null } };
+      seedCache(payload);
+      const { getClaudePlan } = await importClaude();
+      assert.deepEqual(await getClaudePlan(true), payload);
+      assert.equal(fetchCalls.length, 0);
+    });
+
+    it('serves a stale cached gauge rather than nothing', async () => {
+      const payload = { topModel: { name: 'Fable', percent: 46, resetsAt: null } };
+      seedCache(payload, Date.now() - 60 * 60 * 1000);
+      const { getClaudePlan } = await importClaude();
+      assert.deepEqual(await getClaudePlan(true), payload);
+    });
+
+    it('returns null when the cached gauge is empty', async () => {
+      seedCache({ topModel: null });
       const { getClaudePlan } = await importClaude();
       assert.equal(await getClaudePlan(true), null);
-    });
-
-    it('serves a fresh cache without touching source files', async () => {
-      mkdirSync(join(tmpHome, '.cache', 'cc-hud'), { recursive: true });
-      const payload = { tier: 'Max20x', topModel: { name: 'Fable', percent: 46, resetsAt: null } };
-      writeFileSync(cachePath(), JSON.stringify({ payload, ts: Date.now() }));
-      const { getClaudePlan } = await importClaude();
-      assert.deepEqual(await getClaudePlan(true), payload);
-    });
-
-    it('serves a stale cache rather than nothing', async () => {
-      mkdirSync(join(tmpHome, '.cache', 'cc-hud'), { recursive: true });
-      const payload = { tier: 'Max5x', topModel: { name: 'Fable', percent: 46, resetsAt: null } };
-      writeFileSync(cachePath(), JSON.stringify({ payload, ts: Date.now() - 60 * 60 * 1000 }));
-      const { getClaudePlan } = await importClaude();
-      assert.deepEqual(await getClaudePlan(true), payload);
     });
 
     it('survives a malformed cache file', async () => {
       mkdirSync(join(tmpHome, '.cache', 'cc-hud'), { recursive: true });
       writeFileSync(cachePath(), 'not json{');
-      writeClaudeJson({ organizationRateLimitTier: 'default_claude_max_5x' });
       const { getClaudePlan } = await importClaude();
-      const result = await getClaudePlan(true);
-      assert.equal(result!.tier, 'Max5x');
-    });
-  });
-
-  // ─── Tier normalization ───────────────────────────────────────
-
-  describe('tier normalization', () => {
-    const tierOf = async (oauthAccount: Record<string, unknown> | undefined) => {
-      writeClaudeJson(oauthAccount);
-      const { getClaudePlan } = await importClaude();
-      return (await getClaudePlan(true))?.tier ?? null;
-    };
-
-    it('maps default_claude_max_5x to Max5x', async () => {
-      assert.equal(await tierOf({ organizationRateLimitTier: 'default_claude_max_5x' }), 'Max5x');
-    });
-
-    it('maps default_claude_max_20x to Max20x', async () => {
-      assert.equal(await tierOf({ organizationRateLimitTier: 'default_claude_max_20x' }), 'Max20x');
-    });
-
-    it('maps pro tier strings to Pro', async () => {
-      assert.equal(await tierOf({ organizationRateLimitTier: 'default_claude_pro' }), 'Pro');
-    });
-
-    it('falls back to userRateLimitTier when org tier missing', async () => {
-      assert.equal(await tierOf({ userRateLimitTier: 'default_claude_max_20x' }), 'Max20x');
-    });
-
-    it('falls back to organizationType for unknown tier strings', async () => {
-      assert.equal(await tierOf({ organizationRateLimitTier: 'mystery_tier_v9', organizationType: 'claude_team' }), 'Team');
-    });
-
-    it('maps organizationType claude_max to Max when tier absent', async () => {
-      assert.equal(await tierOf({ organizationType: 'claude_max' }), 'Max');
-    });
-
-    it('returns null tier for missing oauthAccount', async () => {
-      assert.equal(await tierOf(undefined), null);
+      assert.equal(await getClaudePlan(true), null);
     });
   });
 
@@ -240,7 +180,6 @@ describe('claude plan', () => {
       const { refreshClaudePlan } = await importClaude();
       await refreshClaudePlan();
       return (JSON.parse(readFileSync(cachePath(), 'utf8')) as { payload: unknown }).payload as {
-        tier: string | null;
         topModel: { name: string; percent: number; resetsAt: number | null } | null;
       };
     };
@@ -295,9 +234,7 @@ describe('claude plan', () => {
           { kind: 'weekly_all', percent: 35 },
         ],
       }), { status: 200 });
-      writeClaudeJson({ organizationRateLimitTier: 'default_claude_max_5x' });
       const payload = await refreshedPayload();
-      assert.equal(payload.tier, 'Max5x');
       assert.equal(payload.topModel, null);
     });
 
@@ -313,10 +250,8 @@ describe('claude plan', () => {
 
     it('skips fetch when the access token is expired', async () => {
       writeCreds({ expiresAt: Date.now() - 1000 });
-      writeClaudeJson({ organizationRateLimitTier: 'default_claude_max_5x' });
       const payload = await refreshedPayload();
       assert.equal(fetchCalls.length, 0);
-      assert.equal(payload.tier, 'Max5x');
       assert.equal(payload.topModel, null);
     });
 
@@ -335,38 +270,29 @@ describe('claude plan', () => {
 
     it('degrades to null topModel when both native fetch and curl fail', async () => {
       nextResponse = new Response('{"error":{"type":"forbidden"}}', { status: 403 });
-      writeClaudeJson({ organizationRateLimitTier: 'default_claude_max_5x' });
       const payload = await refreshedPayload();
-      assert.equal(payload.tier, 'Max5x');
       assert.equal(payload.topModel, null);
     });
 
-    it('keeps tier when usage endpoint returns 401', async () => {
+    it('stores null topModel when usage endpoint returns 401', async () => {
       nextResponse = new Response('{"error":"unauthorized"}', { status: 401 });
-      writeClaudeJson({ organizationRateLimitTier: 'default_claude_max_5x' });
       const payload = await refreshedPayload();
-      assert.equal(payload.tier, 'Max5x');
       assert.equal(payload.topModel, null);
     });
 
-    it('keeps tier on network error', async () => {
+    it('stores null topModel on network error', async () => {
       nextError = new Error('ECONNREFUSED');
-      writeClaudeJson({ organizationRateLimitTier: 'default_claude_max_5x' });
       const payload = await refreshedPayload();
-      assert.equal(payload.tier, 'Max5x');
       assert.equal(payload.topModel, null);
     });
 
-    it('keeps tier on malformed JSON', async () => {
+    it('stores null topModel on malformed JSON', async () => {
       nextResponse = new Response('not json{', { status: 200 });
-      writeClaudeJson({ organizationRateLimitTier: 'default_claude_max_5x' });
       const payload = await refreshedPayload();
-      assert.equal(payload.tier, 'Max5x');
       assert.equal(payload.topModel, null);
     });
 
     it('preserves the previous gauge when a later fetch fails', async () => {
-      writeClaudeJson({ organizationRateLimitTier: 'default_claude_max_5x' });
       await refreshedPayload(); // success → gauge cached
       nextError = new Error('network down');
       const payload = await refreshedPayload();
@@ -381,7 +307,6 @@ describe('claude plan', () => {
     });
 
     it('refreshed cache is served by the tick path without another fetch', async () => {
-      writeClaudeJson({ organizationRateLimitTier: 'default_claude_max_5x' });
       const payload = await refreshedPayload();
       const { getClaudePlan } = await importClaude();
       const r1 = await getClaudePlan(true);

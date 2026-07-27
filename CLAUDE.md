@@ -23,10 +23,10 @@ commands/setup.md           — 安装配置命令（v0.5.0+ 写 launcher 到 ~/
 src/
   index.ts                  — 入口：stdin → 解析 → 渲染 → stdout
   stdin.ts                  — 解析 stdin JSON
-  transcript.ts             — 读 transcript JSONL 尾部 64KB，提取活跃 agent
+  transcript.ts             — 读 transcript JSONL 尾部 64KB，提取活跃 agent + 思考深度（effort）
   render.ts                 — 单行紧凑渲染（1/8 精度进度条 + ANSI 颜色）
   model.ts                  — 模型名美化（claude-opus-4-7[1m] → Opus 4.7 (1M)）
-  claude.ts                 — 官方套餐档位（~/.claude.json）+ 顶级模型周用量（OAuth usage API）
+  claude.ts                 — 顶级模型周用量（OAuth usage API）
   claude-refresh.ts         — 分离式刷新子进程入口（tick 内零网络，后台拉取写缓存）
   balance.ts / glm.ts / mmx.ts  — DeepSeek / GLM / MiniMax 余额或配额采集
   types.ts                  — 类型定义
@@ -39,7 +39,7 @@ tests/*.test.ts(.cjs)       — node:test 单元测试（render / model / mmx / 
 
 ```
 Claude Code → stdin JSON → cc-hud → stdout → 状态栏
-           ↘ transcript JSONL（尾部 64KB → 活跃 agent）
+           ↘ transcript JSONL（尾部 64KB → 活跃 agent + 思考深度 effort）
 ```
 
 ## 性能与稳定性

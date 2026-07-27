@@ -10,10 +10,20 @@ interface ContentBlock {
 }
 
 interface TranscriptLine {
+  type?: string;
+  effort?: unknown;
+  isSidechain?: boolean;
   message?: { content?: ContentBlock[] };
 }
 
-const TAIL_BYTES = 64 * 1024; // 64 KB — agent entries are near the end
+export interface TranscriptInfo {
+  agents: AgentEntry[];
+  effort: string | null; // reasoning effort of the latest main-chain turn ("思考深度")
+}
+
+const EMPTY: TranscriptInfo = { agents: [], effort: null };
+
+const TAIL_BYTES = 64 * 1024; // 64 KB — agent entries & the latest effort are near the end
 
 async function readTail(filePath: string): Promise<string> {
   const info = await stat(filePath);
@@ -37,31 +47,41 @@ async function readTail(filePath: string): Promise<string> {
   }
 }
 
-export async function parseAgents(transcriptPath: string | undefined): Promise<AgentEntry[]> {
-  if (!transcriptPath) return [];
+// Single tail read → active subagents + current thinking depth.
+export async function parseTranscript(transcriptPath: string | undefined): Promise<TranscriptInfo> {
+  if (!transcriptPath) return EMPTY;
 
   let text: string;
   try {
     text = await readTail(transcriptPath);
   } catch {
-    return [];
+    return EMPTY;
   }
 
-  if (!text) return [];
+  if (!text) return EMPTY;
 
   const agents = new Map<string, AgentEntry>();
   const completed = new Set<string>();
+  let effort: string | null = null; // last (= most recent) main-chain assistant effort wins
 
   const lines = text.split('\n');
   for (const line of lines) {
-    // Fast pre-filter: skip lines that can't contain agent data
-    if (!line.includes('"Agent"') && !line.includes('"tool_result"')) continue;
+    // Fast pre-filter: skip lines that carry neither agent data nor an effort field
+    const maybeAgent = line.includes('"Agent"') || line.includes('"tool_result"');
+    const maybeEffort = line.includes('"effort"');
+    if (!maybeAgent && !maybeEffort) continue;
 
     let entry: TranscriptLine;
     try {
       entry = JSON.parse(line);
     } catch {
       continue;
+    }
+
+    // Thinking depth = the effort of the newest main-chain assistant turn.
+    // Ignore sidechain (subagent) turns — they carry their own effort.
+    if (entry.type === 'assistant' && entry.isSidechain !== true && typeof entry.effort === 'string') {
+      effort = entry.effort;
     }
 
     const blocks = entry.message?.content;
@@ -90,5 +110,8 @@ export async function parseAgents(transcriptPath: string | undefined): Promise<A
     if (agent) agent.status = 'completed';
   }
 
-  return [...agents.values()].filter(a => a.status === 'running');
+  return {
+    agents: [...agents.values()].filter(a => a.status === 'running'),
+    effort,
+  };
 }

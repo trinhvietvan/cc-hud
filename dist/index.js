@@ -1,5 +1,5 @@
 import { readStdin } from './stdin.js';
-import { parseAgents } from './transcript.js';
+import { parseTranscript } from './transcript.js';
 import { render } from './render.js';
 import { shortModelName } from './model.js';
 import { getExtra } from './balance.js';
@@ -24,10 +24,11 @@ function readExtraFile() {
 }
 async function main() {
     const data = await readStdin();
-    // Parse transcript in parallel with render prep — no dependency
-    const agentsPromise = parseAgents(data.transcript_path);
-    // Claude plan tier + top-model gauge — no-op for third-party backends,
-    // started early so a cache-miss fetch overlaps with transcript parsing
+    // Parse transcript in parallel with render prep — no dependency.
+    // Yields active subagents + the current thinking depth (reasoning effort).
+    const transcriptPromise = parseTranscript(data.transcript_path);
+    // Top-model weekly gauge — no-op for third-party backends, started early
+    // so a cache-miss fetch overlaps with transcript parsing.
     const planPromise = getClaudePlan(!!data.rate_limits);
     // current_usage is null before the first API call, and again after /compact
     // until the next API call repopulates it. In those windows show "—" instead
@@ -37,7 +38,7 @@ async function main() {
     const contextPercent = usageUnavailable
         ? null
         : Math.round(cw.used_percentage);
-    const agents = await agentsPromise;
+    const { agents, effort } = await transcriptPromise;
     const toMs = (ts) => {
         if (ts == null)
             return null;
@@ -58,7 +59,7 @@ async function main() {
         sevenDayPercent: data.rate_limits?.seven_day?.used_percentage ?? mmQuota?.sevenDayUsedPct ?? null,
         fiveHourResetsAt: toMs(data.rate_limits?.five_hour?.resets_at) ?? mmQuota?.fiveHourResetsAt ?? null,
         sevenDayResetsAt: toMs(data.rate_limits?.seven_day?.resets_at) ?? mmQuota?.sevenDayResetsAt ?? null,
-        planTier: plan?.tier ?? null,
+        thinkingDepth: effort,
         topModel: plan?.topModel ?? null,
         extra,
     };

@@ -1,5 +1,6 @@
 import { open, stat } from 'node:fs/promises';
-const TAIL_BYTES = 64 * 1024; // 64 KB — agent entries are near the end
+const EMPTY = { agents: [], effort: null };
+const TAIL_BYTES = 64 * 1024; // 64 KB — agent entries & the latest effort are near the end
 async function readTail(filePath) {
     const info = await stat(filePath);
     if (!info.isFile() || info.size === 0)
@@ -21,24 +22,28 @@ async function readTail(filePath) {
         await fd.close();
     }
 }
-export async function parseAgents(transcriptPath) {
+// Single tail read → active subagents + current thinking depth.
+export async function parseTranscript(transcriptPath) {
     if (!transcriptPath)
-        return [];
+        return EMPTY;
     let text;
     try {
         text = await readTail(transcriptPath);
     }
     catch {
-        return [];
+        return EMPTY;
     }
     if (!text)
-        return [];
+        return EMPTY;
     const agents = new Map();
     const completed = new Set();
+    let effort = null; // last (= most recent) main-chain assistant effort wins
     const lines = text.split('\n');
     for (const line of lines) {
-        // Fast pre-filter: skip lines that can't contain agent data
-        if (!line.includes('"Agent"') && !line.includes('"tool_result"'))
+        // Fast pre-filter: skip lines that carry neither agent data nor an effort field
+        const maybeAgent = line.includes('"Agent"') || line.includes('"tool_result"');
+        const maybeEffort = line.includes('"effort"');
+        if (!maybeAgent && !maybeEffort)
             continue;
         let entry;
         try {
@@ -46,6 +51,11 @@ export async function parseAgents(transcriptPath) {
         }
         catch {
             continue;
+        }
+        // Thinking depth = the effort of the newest main-chain assistant turn.
+        // Ignore sidechain (subagent) turns — they carry their own effort.
+        if (entry.type === 'assistant' && entry.isSidechain !== true && typeof entry.effort === 'string') {
+            effort = entry.effort;
         }
         const blocks = entry.message?.content;
         if (!Array.isArray(blocks))
@@ -71,5 +81,8 @@ export async function parseAgents(transcriptPath) {
         if (agent)
             agent.status = 'completed';
     }
-    return [...agents.values()].filter(a => a.status === 'running');
+    return {
+        agents: [...agents.values()].filter(a => a.status === 'running'),
+        effort,
+    };
 }

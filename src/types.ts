@@ -43,7 +43,7 @@ export interface RenderData {
   sevenDayPercent: number | null;
   fiveHourResetsAt: number | null;
   sevenDayResetsAt: number | null;
-  planTier: string | null;
+  thinkingDepth: string | null;
   topModel: TopModelUsage | null;
   extra: string | null;
 }

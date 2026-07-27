@@ -15,7 +15,6 @@ const TIMEOUT_MS = 2000;
 const USAGE_URL = 'https://api.anthropic.com/api/oauth/usage';
 
 export interface ClaudePlan {
-  tier: string | null;
   topModel: TopModelUsage | null;
 }
 
@@ -46,38 +45,6 @@ function writeCacheEntry(entry: CacheEntry): void {
     mkdirSync(join(homedir(), CACHE_DIR), { recursive: true });
     writeFileSync(cacheFile(), JSON.stringify(entry));
   } catch { /* best effort */ }
-}
-
-// Tier strings are undocumented ("default_claude_max_5x") — parse defensively,
-// fall back to the coarser organizationType, hide the segment when unknown.
-function normalizeTier(rateLimitTier: unknown, orgType: unknown): string | null {
-  if (typeof rateLimitTier === 'string') {
-    const m = rateLimitTier.match(/max_(\d+)x/i);
-    if (m) return `Max${m[1]}x`;
-    if (/enterprise/i.test(rateLimitTier)) return 'Enterprise';
-    if (/team/i.test(rateLimitTier)) return 'Team';
-    if (/pro/i.test(rateLimitTier)) return 'Pro';
-    if (/free/i.test(rateLimitTier)) return 'Free';
-  }
-  if (typeof orgType === 'string') {
-    if (orgType.includes('enterprise')) return 'Enterprise';
-    if (orgType.includes('team')) return 'Team';
-    if (orgType.includes('max')) return 'Max';
-    if (orgType.includes('pro')) return 'Pro';
-  }
-  return null;
-}
-
-function readTier(): string | null {
-  try {
-    const raw = readFileSync(join(homedir(), '.claude.json'), 'utf8');
-    const acct = (JSON.parse(raw) as { oauthAccount?: Record<string, unknown> }).oauthAccount;
-    if (!acct) return null;
-    return normalizeTier(
-      acct.organizationRateLimitTier ?? acct.userRateLimitTier,
-      acct.organizationType,
-    );
-  } catch { return null; }
 }
 
 function tokenFromCreds(raw: string): string | null {
@@ -205,12 +172,10 @@ async function fetchTopModel(token: string): Promise<TopModelUsage | null> {
 export async function refreshClaudePlan(): Promise<void> {
   if (!isAnthropic()) return;
   const cached = readCache();
-  const tier = readTier();
   const token = readAccessToken();
   const topModel = token ? await fetchTopModel(token) : null;
   writeCacheEntry({
     payload: {
-      tier: tier ?? cached?.payload?.tier ?? null,
       topModel: topModel ?? cached?.payload?.topModel ?? null,
     },
     ts: Date.now(),
@@ -240,22 +205,19 @@ export async function getClaudePlan(hasRateLimits: boolean): Promise<ClaudePlan 
   const cached = readCache();
   const now = Date.now();
   if (cached && now - cached.ts < TTL) {
-    return cached.payload ?? null;
+    return cached.payload?.topModel ? cached.payload : null;
   }
 
-  // Stale or missing → kick off a background refresh, render with what we have.
-  // The refreshTs stamp both rate-limits spawns and (via the placeholder entry)
-  // keeps the heavy ~/.claude.json parse off the per-tick path.
+  // Stale or missing → kick off a background refresh; the gauge arrives next tick.
+  // The refreshTs stamp throttles detached-refresh spawns (REFRESH_COOLDOWN).
   if (cached?.refreshTs == null || now - cached.refreshTs >= REFRESH_COOLDOWN) {
     const placeholder: CacheEntry = cached
       ? { ...cached, refreshTs: now }
-      : { payload: { tier: readTier(), topModel: null }, ts: 0, refreshTs: now };
+      : { payload: { topModel: null }, ts: 0, refreshTs: now };
     writeCacheEntry(placeholder);
     spawnRefresh();
-    const p = placeholder.payload;
-    return (p?.tier ?? null) === null && (p?.topModel ?? null) === null ? null : p;
+    return placeholder.payload?.topModel ? placeholder.payload : null;
   }
 
-  const p = cached?.payload ?? null;
-  return p === null || (p.tier === null && p.topModel === null) ? null : p;
+  return cached?.payload?.topModel ? cached.payload : null;
 }
