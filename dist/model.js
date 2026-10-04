@@ -37,14 +37,19 @@ function tryParse(raw) {
     }
     return null;
 }
-// Extended-context label from the window size, for ids that no longer carry the
-// `[1m]` suffix (claude-opus-5-5 with a 1,000,000-token window → "1M").
-// Standard windows stay unlabeled, matching the suffix-only behavior.
+// Context window label from the reported size: 200,000 → "200K", 1,000,000 → "1M".
+// Current ids (claude-opus-5-5) no longer carry a `[1m]` suffix, so the size is
+// the reliable source; the suffix variant is only the fallback when size is absent.
 export function contextVariant(size) {
-    if (!size || size < 1_000_000)
+    if (!size || size <= 0)
         return null;
-    const m = size / 1_000_000;
-    return `${Number.isInteger(m) ? m : m.toFixed(1)}M`;
+    if (size >= 1_000_000) {
+        const m = size / 1_000_000;
+        return `${Number.isInteger(m) ? m : m.toFixed(1)}M`;
+    }
+    if (size >= 1000)
+        return `${Math.round(size / 1000)}K`;
+    return String(size);
 }
 export function shortModelName(displayName, id) {
     // Try id first (carries accurate [1m] variant suffix)

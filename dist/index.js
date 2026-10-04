@@ -62,7 +62,7 @@ async function main() {
     const plan = await planPromise;
     const renderData = {
         model: modelName.name,
-        modelVariant: modelName.variant ?? contextVariant(cw?.context_window_size),
+        modelVariant: contextVariant(cw?.context_window_size) ?? modelName.variant,
         contextPercent,
         contextTokens,
         agents,

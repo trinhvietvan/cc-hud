@@ -85,7 +85,7 @@
 
 | Segment | Shows |
 | --- | --- |
-| `🤖 Opus 5.5 · 1M` | Model name, plus `1M` when the context window is 1M tokens (from the model id's `[1m]` suffix or the reported window size) |
+| `🤖 Opus 5.5 · 1M` | Model name, plus the size of its context window — `200K`, `1M`, … (from the reported window size, or the model id's `[1m]` suffix) |
 | `🧠 High` | Thinking depth (reasoning effort) — hidden when the transcript carries none |
 | `⚡ 50% · 500k tokens` | Context window usage and the tokens currently in it; `⚡ —%` right after `/compact` until the next API call |
 | `🧩 Explore (haiku)` | Running subagents (up to 3), with model — only while any are running |
@@ -235,7 +235,7 @@ Set the `CC_HUD_EXTRA_FILE` env var to any file whose first line is the text to 
 ```bash
 npm install
 npm run build      # compile TypeScript → dist/
-npm test           # 135 tests (node:test)
+npm test           # 136 tests (node:test)
 ```
 
 Project layout:

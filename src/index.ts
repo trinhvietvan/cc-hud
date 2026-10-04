@@ -72,7 +72,7 @@ async function main(): Promise<void> {
 
   const renderData: RenderData = {
     model: modelName.name,
-    modelVariant: modelName.variant ?? contextVariant(cw?.context_window_size),
+    modelVariant: contextVariant(cw?.context_window_size) ?? modelName.variant,
     contextPercent,
     contextTokens,
     agents,

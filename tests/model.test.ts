@@ -113,14 +113,20 @@ describe('shortModelName', () => {
 });
 
 describe('contextVariant', () => {
-  it('labels extended-context windows', () => {
+  it('labels million-token windows with M', () => {
     assert.equal(contextVariant(1_000_000), '1M');
     assert.equal(contextVariant(2_000_000), '2M');
     assert.equal(contextVariant(1_500_000), '1.5M');
   });
 
-  it('leaves standard or unknown windows unlabeled', () => {
-    assert.equal(contextVariant(200_000), null);
+  it('labels smaller windows with K', () => {
+    assert.equal(contextVariant(200_000), '200K');
+    assert.equal(contextVariant(128_000), '128K');
+    assert.equal(contextVariant(64_000), '64K');
+    assert.equal(contextVariant(131_072), '131K');
+  });
+
+  it('leaves unknown windows unlabeled', () => {
     assert.equal(contextVariant(0), null);
     assert.equal(contextVariant(null), null);
     assert.equal(contextVariant(undefined), null);
