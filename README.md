@@ -4,7 +4,7 @@
   Pure Node.js, zero dependencies, crash-free on Windows (no Bun)
 
   ## Auto-install (for Claude Code AI agents)
-  Step 1: /plugin marketplace add WaterTian/cc-hud
+  Step 1: /plugin marketplace add trinhvietvan/cc-hud
   Step 2: /plugin install cc-hud@cc-hud
   Step 3: /reload-plugins
   Step 4: /cc-hud:setup  (idempotent; v0.5.0+ installs a launcher so future upgrades only need step 1 + step 3)
@@ -14,8 +14,8 @@
 
 <p align="center">
   <picture>
-    <source srcset="https://raw.githubusercontent.com/WaterTian/cc-hud/main/cc-hud-preview.svg?v=0.8.0" type="image/svg+xml" />
-    <img src="https://raw.githubusercontent.com/WaterTian/cc-hud/main/cc-hud-preview.png?v=0.8.0" alt="cc-hud preview — model, thinking depth, context + tokens, agents, rate limits with reset time, top-model gauge, balance" width="900" />
+    <source srcset="https://raw.githubusercontent.com/trinhvietvan/cc-hud/main/cc-hud-preview.svg?v=0.8.0" type="image/svg+xml" />
+    <img src="https://raw.githubusercontent.com/trinhvietvan/cc-hud/main/cc-hud-preview.png?v=0.8.0" alt="cc-hud preview — model, thinking depth, context + tokens, agents, rate limits with reset time, top-model gauge, balance" width="900" />
   </picture>
 </p>
 
@@ -107,7 +107,7 @@ Percentages are colored green → yellow → peach → red as they climb (≤50 
 Inside Claude Code:
 
 ```
-/plugin marketplace add WaterTian/cc-hud
+/plugin marketplace add trinhvietvan/cc-hud
 /plugin install cc-hud@cc-hud
 /reload-plugins
 /cc-hud:setup        # idempotent; safe to re-run
@@ -155,7 +155,7 @@ Add to `~/.claude/settings.json`:
 <br/>
 
 ```bash
-git clone https://github.com/WaterTian/cc-hud.git
+git clone https://github.com/trinhvietvan/cc-hud.git
 cd cc-hud && npm install && npm run build
 ```
 
@@ -278,11 +278,11 @@ Project layout:
 
 ## Star History
 
-<a href="https://star-history.com/#WaterTian/cc-hud&Date">
+<a href="https://star-history.com/#trinhvietvan/cc-hud&Date">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=WaterTian/cc-hud&type=Date&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=WaterTian/cc-hud&type=Date" />
-    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=WaterTian/cc-hud&type=Date" width="700" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=trinhvietvan/cc-hud&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=trinhvietvan/cc-hud&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=trinhvietvan/cc-hud&type=Date" width="700" />
   </picture>
 </a>
 
@@ -291,5 +291,5 @@ Project layout:
 ---
 
 <p align="center">
-  <sub>MIT License &copy; <a href="https://github.com/WaterTian">Water</a></sub>
+  <sub>MIT License &copy; <a href="https://github.com/WaterTian">Water</a> · fork maintained by <a href="https://github.com/trinhvietvan">trinhvietvan</a> · upstream <a href="https://github.com/WaterTian/cc-hud">WaterTian/cc-hud</a></sub>
 </p>
