@@ -33,10 +33,6 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/cc-hud"><img src="https://img.shields.io/npm/v/cc-hud?style=flat-square&color=cb3837" alt="npm version" /></a>
-  &nbsp;
-  <a href="https://www.npmjs.com/package/cc-hud"><img src="https://img.shields.io/npm/dm/cc-hud?style=flat-square&color=cb3837" alt="npm downloads" /></a>
-  &nbsp;
   <a href="#install"><img src="https://img.shields.io/badge/install-4_commands-blueviolet?style=flat-square" alt="install" /></a>
   &nbsp;
   <img src="https://img.shields.io/badge/dependencies-0-brightgreen?style=flat-square" alt="zero deps" />
@@ -127,28 +123,6 @@ Inside Claude Code:
 
 > [!NOTE]
 > The launcher resolves the currently installed cc-hud version on each tick, so upgrades need **no re-setup**. Upgrading from **≤0.4.x**? Re-run `/cc-hud:setup` **once** — it auto-detects the old version-pinned path and migrates it to the launcher.
-
-<details>
-<summary><b>Via npm (manual)</b></summary>
-<br/>
-
-```bash
-npm i -g cc-hud
-```
-
-Add to `~/.claude/settings.json`:
-
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "npx cc-hud",
-    "padding": 2
-  }
-}
-```
-
-</details>
 
 <details>
 <summary><b>From source</b></summary>
