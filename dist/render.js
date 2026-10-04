@@ -7,6 +7,7 @@ const PEACH = fg(216); // #fab387 — warning
 const RED = fg(211); // #f38ba8 — critical
 const TEAL = fg(115); // #94e2d5 — agent accent
 const BLUE = fg(111); // #89b4fa — info accent
+const MAUVE = fg(183); // #cba6f7 — git branch
 const SAPPHIRE = fg(117); // #74c7ec — reset time: plenty
 const LAVENDER = fg(147); // #b4befe — reset time: moderate
 const FLAMINGO = fg(224); // #f2cdcd — reset time: attention
@@ -66,13 +67,15 @@ function formatReset(resetsAt, withDate) {
     const d = new Date(resetsAt);
     const time = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
     const text = withDate ? `${pad2(d.getDate())}-${MONTHS[d.getMonth()]} ${time}` : time;
-    return `${OVERLAY}Resets${RESET} ${resetColor(ms)}${text}${RESET}`;
+    return `${OVERLAY}Rs${RESET} ${resetColor(ms)}${text}${RESET}`;
 }
-function rateSegment(icon, label, percent, resetsAt, withDate) {
+// `labelSep` sits between label and percent: a plain space reads as one phrase
+// ("Usage 12%"), a dot sets apart a name that isn't a label ("Fable · 46%").
+function rateSegment(icon, label, percent, resetsAt, withDate, labelSep = ' ') {
     if (percent == null)
         return null;
     const reset = formatReset(resetsAt, withDate);
-    return `${icon} ${TEXT}${label}${RESET}${DOT}${pct(percent)}${reset ? DOT + reset : ''}`;
+    return `${icon} ${TEXT}${label}${RESET}${labelSep}${pct(percent)}${reset ? DOT + reset : ''}`;
 }
 function agentSegment(agents) {
     if (agents.length === 0)
@@ -88,7 +91,7 @@ function agentSegment(agents) {
 function sameReset(a, b) {
     return a != null && b != null && Math.abs(a - b) < 60_000;
 }
-// 🤖 Opus 5.5 · 1M | 🧠 High | ⚡ 50% · 500k tokens | 🔥 5H · 12% · Resets 21:30 | ⚙️ 7D · 40% · Resets 04-Oct 21:30
+// 🤖 Opus 5.5 · 1M | 🧠 High | ⚡ Ctx 50% · 500k tokens | 🔥 Usage 12% · Rs 21:30 | ⚙️ Weekly 40% · Rs 04-Oct 21:30 | 🌿 git main
 export function render(data) {
     const segments = [];
     const variant = data.modelVariant ? `${DOT}${TEXT}${data.modelVariant}${RESET}` : '';
@@ -99,28 +102,31 @@ export function render(data) {
     // null = current_usage not yet populated (start of session or just after /compact)
     // — show a dim em-dash so it doesn't look like the context just emptied.
     if (data.contextPercent === null) {
-        segments.push(`⚡ ${OVERLAY}—%${RESET}`);
+        segments.push(`⚡ ${TEXT}Ctx${RESET} ${OVERLAY}—%${RESET}`);
     }
     else {
         const tokens = data.contextTokens != null
             ? `${DOT}${TEXT}${formatTokens(data.contextTokens)} tokens${RESET}`
             : '';
-        segments.push(`⚡ ${pct(data.contextPercent)}${tokens}`);
+        segments.push(`⚡ ${TEXT}Ctx${RESET} ${pct(data.contextPercent)}${tokens}`);
     }
     const agentStr = agentSegment(data.agents);
     if (agentStr)
         segments.push(agentStr);
     const rates = [
-        rateSegment('🔥', '5H', data.fiveHourPercent, data.fiveHourResetsAt, false),
-        rateSegment('⚙️', '7D', data.sevenDayPercent, data.sevenDayResetsAt, true),
+        rateSegment('🔥', 'Usage', data.fiveHourPercent, data.fiveHourResetsAt, false),
+        rateSegment('⚙️', 'Weekly', data.sevenDayPercent, data.sevenDayResetsAt, true),
         data.topModel
-            ? rateSegment('🏆', data.topModel.name, data.topModel.percent, sameReset(data.topModel.resetsAt, data.sevenDayResetsAt) ? null : data.topModel.resetsAt, true)
+            ? rateSegment('🏆', data.topModel.name, data.topModel.percent, sameReset(data.topModel.resetsAt, data.sevenDayResetsAt) ? null : data.topModel.resetsAt, true, DOT)
             : null,
     ].filter((s) => s !== null);
     segments.push(...rates);
     // Extra (generic pluggable segment, e.g. balance for non-Anthropic backends)
     if (data.extra) {
         segments.push(`💰 ${TEAL}${data.extra}${RESET}`);
+    }
+    if (data.gitBranch) {
+        segments.push(`🌿 ${OVERLAY}git${RESET} ${MAUVE}${data.gitBranch}${RESET}`);
     }
     return segments.join(SEP);
 }

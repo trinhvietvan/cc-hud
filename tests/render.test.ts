@@ -20,6 +20,7 @@ function makeData(overrides: Partial<RenderData> = {}): RenderData {
     thinkingDepth: null,
     topModel: null,
     extra: null,
+    gitBranch: null,
     ...overrides,
   };
 }
@@ -50,18 +51,18 @@ describe('render', () => {
     })));
     assert.match(
       out,
-      /^🤖 Opus 5\.5 · 1M \| 🧠 High \| ⚡ 50% · 500k tokens \| 🔥 5H · 12% · Resets \d\d:\d\d \| ⚙️ 7D · 40% · Resets \d\d-[A-Z][a-z]{2} \d\d:\d\d$/,
+      /^🤖 Opus 5\.5 · 1M \| 🧠 High \| ⚡ Ctx 50% · 500k tokens \| 🔥 Usage 12% · Rs \d\d:\d\d \| ⚙️ Weekly 40% · Rs \d\d-[A-Z][a-z]{2} \d\d:\d\d$/,
     );
   });
 
   it('shows model name and 0% with no data', () => {
     const out = strip(render(makeData()));
-    assert.equal(out, '🤖 Opus | ⚡ 0%');
+    assert.equal(out, '🤖 Opus | ⚡ Ctx 0%');
   });
 
   it('clamps percentage to 0-100', () => {
-    assert.match(strip(render(makeData({ contextPercent: -5 }))), /⚡ 0%/);
-    assert.match(strip(render(makeData({ contextPercent: 150 }))), /⚡ 100%/);
+    assert.match(strip(render(makeData({ contextPercent: -5 }))), /⚡ Ctx 0%/);
+    assert.match(strip(render(makeData({ contextPercent: 150 }))), /⚡ Ctx 100%/);
   });
 
   it('omits variant when modelVariant is null', () => {
@@ -85,7 +86,7 @@ describe('render', () => {
 
   it('shows em-dash when contextPercent is null (no current_usage yet)', () => {
     const out = strip(render(makeData({ contextPercent: null, contextTokens: null })));
-    assert.match(out, /⚡ —%/);
+    assert.match(out, /⚡ Ctx —%/);
     assert.ok(!out.includes('0%'));
   });
 
@@ -100,38 +101,38 @@ describe('render', () => {
 
   it('shows rate limits when provided', () => {
     const out = strip(render(makeData({ fiveHourPercent: 25, sevenDayPercent: 10 })));
-    assert.match(out, /🔥 5H · 25% \| ⚙️ 7D · 10%$/);
+    assert.match(out, /🔥 Usage 25% \| ⚙️ Weekly 10%$/);
   });
 
   it('omits rate limits when null', () => {
     const out = strip(render(makeData()));
-    assert.ok(!out.includes('5H'));
-    assert.ok(!out.includes('7D'));
+    assert.ok(!out.includes('Usage'));
+    assert.ok(!out.includes('Weekly'));
   });
 
-  it('shows only 5H when 7D is null', () => {
+  it('shows only Usage when Weekly is null', () => {
     const out = strip(render(makeData({ fiveHourPercent: 50 })));
-    assert.match(out, /5H · 50%/);
-    assert.ok(!out.includes('7D'));
+    assert.match(out, /Usage 50%/);
+    assert.ok(!out.includes('Weekly'));
   });
 
-  it('shows 5H reset as local HH:MM', () => {
+  it('shows Usage reset as local HH:MM', () => {
     const at = futureAt(60_000, 21, 30);
     const out = strip(render(makeData({ fiveHourPercent: 12, fiveHourResetsAt: at.getTime() })));
-    assert.match(out, /5H · 12% · Resets 21:30$/);
+    assert.match(out, /Usage 12% · Rs 21:30$/);
   });
 
-  it('shows 7D reset as local DD-Mon HH:MM', () => {
+  it('shows Weekly reset as local DD-Mon HH:MM', () => {
     const at = futureAt(60_000, 9, 5);
     const date = `${String(at.getDate()).padStart(2, '0')}-${MONTHS[at.getMonth()]}`;
     const out = strip(render(makeData({ sevenDayPercent: 40, sevenDayResetsAt: at.getTime() })));
-    assert.ok(out.endsWith(`7D · 40% · Resets ${date} 09:05`), out);
+    assert.ok(out.endsWith(`Weekly 40% · Rs ${date} 09:05`), out);
   });
 
   it('omits reset when resets_at is null or in the past', () => {
-    assert.ok(!strip(render(makeData({ fiveHourPercent: 25 }))).includes('Resets'));
+    assert.ok(!strip(render(makeData({ fiveHourPercent: 25 }))).includes('Rs '));
     const past = strip(render(makeData({ fiveHourPercent: 25, fiveHourResetsAt: Date.now() - 60_000 })));
-    assert.ok(!past.includes('Resets'));
+    assert.ok(!past.includes('Rs '));
   });
 
   it('shows agent segment when agents exist', () => {
@@ -159,7 +160,7 @@ describe('render', () => {
 
   it('shows extra segment when provided', () => {
     const out = strip(render(makeData({ fiveHourPercent: 50, extra: '¥3.77' })));
-    assert.match(out, /5H · 50% \| 💰 ¥3\.77$/);
+    assert.match(out, /Usage 50% \| 💰 ¥3\.77$/);
   });
 
   it('omits extra segment when null', () => {
@@ -170,37 +171,46 @@ describe('render', () => {
     assert.match(strip(render(makeData({ model: 'DeepSeek V4 Pro' }))), /^🤖 DeepSeek V4 Pro/);
   });
 
-  it('shows top-model gauge after 7D', () => {
+  it('shows top-model gauge after Weekly', () => {
     const out = strip(render(makeData({
       fiveHourPercent: 1,
       sevenDayPercent: 35,
       topModel: { name: 'Fable', percent: 46, resetsAt: null },
     })));
-    assert.match(out, /5H · 1% \| ⚙️ 7D · 35% \| 🏆 Fable · 46%$/);
+    assert.match(out, /Usage 1% \| ⚙️ Weekly 35% \| 🏆 Fable · 46%$/);
   });
 
-  it('suppresses top-model reset when it matches the 7D reset', () => {
+  it('suppresses top-model reset when it matches the Weekly reset', () => {
     const resetsAt = Date.now() + 2.5 * 86_400_000;
     const out = strip(render(makeData({
       sevenDayPercent: 35,
       sevenDayResetsAt: resetsAt,
       topModel: { name: 'Fable', percent: 46, resetsAt: resetsAt + 500 },
     })));
-    assert.match(out, /7D · 35% · Resets .* \| 🏆 Fable · 46%$/);
+    assert.match(out, /Weekly 35% · Rs .* \| 🏆 Fable · 46%$/);
   });
 
-  it('shows top-model reset when it differs from the 7D reset', () => {
+  it('shows top-model reset when it differs from the Weekly reset', () => {
     const now = Date.now();
     const out = strip(render(makeData({
       sevenDayPercent: 35,
       sevenDayResetsAt: now + 2 * 86_400_000,
       topModel: { name: 'Fable', percent: 46, resetsAt: now + 4 * 86_400_000 },
     })));
-    assert.match(out, /🏆 Fable · 46% · Resets \d\d-[A-Z][a-z]{2} \d\d:\d\d$/);
+    assert.match(out, /🏆 Fable · 46% · Rs \d\d-[A-Z][a-z]{2} \d\d:\d\d$/);
   });
 
   it('colors top-model gauge by usage threshold', () => {
     const raw = render(makeData({ topModel: { name: 'Fable', percent: 90, resetsAt: null } }));
     assert.match(raw, /\x1b\[38;5;211m/); // RED for 90%
+  });
+
+  it('shows git branch as the last segment', () => {
+    const out = strip(render(makeData({ fiveHourPercent: 5, extra: '¥3.77', gitBranch: 'main' })));
+    assert.match(out, /💰 ¥3\.77 \| 🌿 git main$/);
+  });
+
+  it('omits git segment outside a repo', () => {
+    assert.ok(!strip(render(makeData())).includes('🌿'));
   });
 });

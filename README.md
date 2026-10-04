@@ -14,8 +14,8 @@
 
 <p align="center">
   <picture>
-    <source srcset="https://raw.githubusercontent.com/trinhvietvan/cc-hud/main/cc-hud-preview.svg?v=0.8.0" type="image/svg+xml" />
-    <img src="https://raw.githubusercontent.com/trinhvietvan/cc-hud/main/cc-hud-preview.png?v=0.8.0" alt="cc-hud preview — model, thinking depth, context + tokens, agents, rate limits with reset time, top-model gauge, balance" width="900" />
+    <source srcset="https://raw.githubusercontent.com/trinhvietvan/cc-hud/main/cc-hud-preview.svg?v=0.9.0" type="image/svg+xml" />
+    <img src="https://raw.githubusercontent.com/trinhvietvan/cc-hud/main/cc-hud-preview.png?v=0.9.0" alt="cc-hud preview — model, thinking depth, context + tokens, agents, rate limits with reset time, top-model gauge, balance, git branch" width="900" />
   </picture>
 </p>
 
@@ -66,12 +66,13 @@
 
 <table>
 <tr>
-  <td align="center" width="16%"><h3>⚡</h3><b>Context</b><br/><sub>Usage percent<br/>+ live token count</sub></td>
-  <td align="center" width="17%"><h3>★</h3><b>Depth & Top Model</b><br/><sub>Thinking-depth badge<br/>Opus/Fable weekly gauge</sub></td>
-  <td align="center" width="17%"><h3>🧩</h3><b>Agents</b><br/><sub>Running subagents<br/>with type & model</sub></td>
-  <td align="center" width="17%"><h3>%</h3><b>Rate Limits</b><br/><sub>5h / 7d usage<br/>+ local reset time</sub></td>
-  <td align="center" width="17%"><h3>◧</h3><b>Color</b><br/><sub><a href="https://github.com/catppuccin/catppuccin">Catppuccin Mocha</a><br/>dual-tone gradient</sub></td>
-  <td align="center" width="16%"><h3>0</h3><b>Dependencies</b><br/><sub>Zero. Node.js<br/>built-ins only</sub></td>
+  <td align="center" width="14%"><h3>⚡</h3><b>Context</b><br/><sub>Usage percent<br/>+ live token count</sub></td>
+  <td align="center" width="15%"><h3>★</h3><b>Depth & Top Model</b><br/><sub>Thinking-depth badge<br/>Opus/Fable weekly gauge</sub></td>
+  <td align="center" width="14%"><h3>🧩</h3><b>Agents</b><br/><sub>Running subagents<br/>with type & model</sub></td>
+  <td align="center" width="15%"><h3>%</h3><b>Rate Limits</b><br/><sub>5h usage / weekly<br/>+ local reset time</sub></td>
+  <td align="center" width="14%"><h3>🌿</h3><b>Git</b><br/><sub>Current branch<br/>read from .git/HEAD</sub></td>
+  <td align="center" width="14%"><h3>◧</h3><b>Color</b><br/><sub><a href="https://github.com/catppuccin/catppuccin">Catppuccin Mocha</a><br/>dual-tone gradient</sub></td>
+  <td align="center" width="14%"><h3>0</h3><b>Dependencies</b><br/><sub>Zero. Node.js<br/>built-ins only</sub></td>
 </tr>
 </table>
 
@@ -80,19 +81,20 @@
 ## Layout
 
 ```
-🤖 Opus 5.5 · 1M | 🧠 High | ⚡ 50% · 500k tokens | 🔥 5H · 12% · Resets 21:30 | ⚙️ 7D · 40% · Resets 08-Oct 21:30
+🤖 Opus 5.5 · 1M | 🧠 High | ⚡ Ctx 50% · 500k tokens | 🔥 Usage 12% · Rs 21:30 | ⚙️ Weekly 40% · Rs 08-Oct 21:30 | 🌿 git main
 ```
 
 | Segment | Shows |
 | --- | --- |
 | `🤖 Opus 5.5 · 1M` | Model name, plus the size of its context window — `200K`, `1M`, … (from the reported window size, or the model id's `[1m]` suffix) |
 | `🧠 High` | Thinking depth (reasoning effort) — hidden when the transcript carries none |
-| `⚡ 50% · 500k tokens` | Context window usage and the tokens currently in it; `⚡ —%` right after `/compact` until the next API call |
+| `⚡ Ctx 50% · 500k tokens` | Context window usage and the tokens currently in it; `⚡ Ctx —%` until the first API call of a session and right after `/compact` |
 | `🧩 Explore (haiku)` | Running subagents (up to 3), with model — only while any are running |
-| `🔥 5H · 12% · Resets 21:30` | 5-hour rate limit and when it resets, in local time |
-| `⚙️ 7D · 40% · Resets 08-Oct 21:30` | 7-day rate limit and its reset date + time |
+| `🔥 Usage 12% · Rs 21:30` | 5-hour rate limit and when it resets (`Rs`), in local time |
+| `⚙️ Weekly 40% · Rs 08-Oct 21:30` | 7-day rate limit and its reset date + time |
 | `🏆 Fable · 51%` | Top-model weekly gauge (see below) |
 | `💰 ¥13.44` | Balance for third-party backends, or your own `CC_HUD_EXTRA_FILE` text |
+| `🌿 git main` | Current git branch (short hash on a detached HEAD), read straight from `.git/HEAD` with no `git` spawn — worktrees included; hidden outside a repo |
 
 Percentages are colored green → yellow → peach → red as they climb (≤50 / ≤70 / ≤85 / above); reset times shift from sapphire to maroon as the reset approaches.
 
@@ -176,7 +178,7 @@ Claude Code ──stdin JSON──→  ~/.claude/bin/cc-hud-launcher.cjs   ← s
 cc-hud shows your current **thinking depth** (the model's reasoning effort — `Low` / `Medium` / `High` / `XHigh` / `Max`) as its own `🧠` segment, plus the **top-tier-model weekly gauge** — the "Current week (Opus / Fable)" meter from `/usage` that the statusline JSON doesn't expose:
 
 ```
-🤖 Fable 5 | 🧠 XHigh | ⚡ 18% · 180k tokens | 🔥 5H · 1% · Resets 22:15 | ⚙️ 7D · 35% · Resets 08-Oct 21:30 | 🏆 Fable · 51%
+🤖 Fable 5 | 🧠 XHigh | ⚡ Ctx 18% · 180k tokens | 🔥 Usage 1% · Rs 22:15 | ⚙️ Weekly 35% · Rs 08-Oct 21:30 | 🏆 Fable · 51%
 ```
 
 - **Thinking depth** comes from the statusline JSON's `effort.level`, so it updates the moment you run `/effort`; older Claude Code builds fall back to the latest transcript turn's `effort`. **Zero network**, works on every backend. The segment hides itself when neither source carries an effort.
@@ -205,7 +207,7 @@ cc-hud detects your `ANTHROPIC_BASE_URL` and pulls **balance / quota** automatic
 <tr>
   <td><b>MiniMax</b></td>
   <td><code>https://api.minimaxi.com/anthropic</code></td>
-  <td>Token Plan — <code>🔥 5H · 17% · Resets 18:50 | ⚙️ 7D · 2% · Resets 10-Oct 09:00</code></td>
+  <td>Token Plan — <code>🔥 Usage 17% · Rs 18:50 | ⚙️ Weekly 2% · Rs 10-Oct 09:00</code></td>
 </tr>
 <tr>
   <td><b>GLM</b></td>
@@ -217,9 +219,9 @@ cc-hud detects your `ANTHROPIC_BASE_URL` and pulls **balance / quota** automatic
 Example output:
 
 ```
-🤖 DeepSeek V4 Pro | ⚡ 20% · 200k tokens | 💰 ¥13.44
-🤖 MiniMax M3 | ⚡ 13% · 26k tokens | 🔥 5H · 17% · Resets 18:50 | ⚙️ 7D · 2% · Resets 10-Oct 09:00
-🤖 GLM 5.2 · 1M | ⚡ 41% · 410k tokens | 💰 ¥88.50
+🤖 DeepSeek V4 Pro | ⚡ Ctx 20% · 200k tokens | 💰 ¥13.44
+🤖 MiniMax M3 | ⚡ Ctx 13% · 26k tokens | 🔥 Usage 17% · Rs 18:50 | ⚙️ Weekly 2% · Rs 10-Oct 09:00
+🤖 GLM 5.2 · 1M | ⚡ Ctx 41% · 410k tokens | 💰 ¥88.50
 ```
 
 Works with `dscode` / `mmcode` / `glmcode` / `ZCode` or any launcher that exports `ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN`.

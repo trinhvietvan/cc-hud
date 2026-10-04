@@ -6,6 +6,7 @@ import { getExtra } from './balance.js';
 import { getMmxQuota } from './mmx.js';
 import { getGlmBalance } from './glm.js';
 import { getClaudePlan } from './claude.js';
+import { getGitBranch } from './git.js';
 import { readFileSync } from 'node:fs';
 import type { RenderData } from './types.js';
 
@@ -85,6 +86,7 @@ async function main(): Promise<void> {
     thinkingDepth: data.effort?.level || effort,
     topModel: plan?.topModel ?? null,
     extra,
+    gitBranch: getGitBranch(data.workspace?.current_dir ?? data.cwd),
   };
 
   console.log(render(renderData));

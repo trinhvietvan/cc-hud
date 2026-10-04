@@ -24,7 +24,8 @@ src/
   index.ts                  — 入口：stdin → 解析 → 渲染 → stdout
   stdin.ts                  — 解析 stdin JSON
   transcript.ts             — 读 transcript JSONL 尾部 64KB，提取活跃 agent + 思考深度（effort，stdin effort.level 优先）
-  render.ts                 — 单行 emoji 布局渲染（🤖 模型 | 🧠 深度 | ⚡ 上下文+tokens | 🔥 5H | ⚙️ 7D，ANSI 颜色）
+  render.ts                 — 单行 emoji 布局渲染（🤖 模型 | 🧠 深度 | ⚡ Ctx+tokens | 🔥 Usage | ⚙️ Weekly | 🌿 git，ANSI 颜色）
+  git.ts                    — 读 .git/HEAD 取当前分支（不 spawn git，支持 worktree）
   model.ts                  — 模型名美化（claude-opus-4-7[1m] → Opus 4.7 (1M)）
   claude.ts                 — 顶级模型周用量（OAuth usage API）
   claude-refresh.ts         — 分离式刷新子进程入口（tick 内零网络，后台拉取写缓存）
@@ -32,7 +33,7 @@ src/
   types.ts                  — 类型定义
 scripts/launcher.cjs        — 稳定路径 launcher（setup 复制到 ~/.claude/bin/cc-hud-launcher.cjs）
 dist/                       — 编译输出（提交到仓库）
-tests/*.test.ts(.cjs)       — node:test 单元测试（render / model / mmx / glm / claude / launcher）
+tests/*.test.ts(.cjs)       — node:test 单元测试（render / model / git / mmx / glm / claude / launcher）
 ```
 
 ## 数据流

@@ -6,6 +6,7 @@ import { getExtra } from './balance.js';
 import { getMmxQuota } from './mmx.js';
 import { getGlmBalance } from './glm.js';
 import { getClaudePlan } from './claude.js';
+import { getGitBranch } from './git.js';
 import { readFileSync } from 'node:fs';
 // Hard timeout — never block Claude Code
 const TIMEOUT_MS = 2000;
@@ -75,6 +76,7 @@ async function main() {
         thinkingDepth: data.effort?.level || effort,
         topModel: plan?.topModel ?? null,
         extra,
+        gitBranch: getGitBranch(data.workspace?.current_dir ?? data.cwd),
     };
     console.log(render(renderData));
 }

@@ -19,6 +19,7 @@ export interface StdinData {
   effort?: { level?: string | null } | null;
   transcript_path?: string;
   cwd?: string;
+  workspace?: { current_dir?: string; project_dir?: string } | null;
 }
 
 export interface AgentEntry {
@@ -49,4 +50,5 @@ export interface RenderData {
   thinkingDepth: string | null;
   topModel: TopModelUsage | null;
   extra: string | null;
+  gitBranch: string | null;
 }
