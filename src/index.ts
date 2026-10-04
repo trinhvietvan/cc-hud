@@ -43,6 +43,16 @@ async function main(): Promise<void> {
   const contextPercent: number | null = usageUnavailable
     ? null
     : Math.round(cw!.used_percentage as number);
+  // Tokens occupying the window — same input-side sum Claude Code derives
+  // used_percentage from; fall back to size × percent if the breakdown is absent.
+  const u = cw?.current_usage;
+  const contextTokens: number | null = usageUnavailable
+    ? null
+    : u
+      ? (u.input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0)
+      : cw?.context_window_size
+        ? Math.round((cw.context_window_size * (cw.used_percentage as number)) / 100)
+        : null;
   const { agents, effort } = await transcriptPromise;
 
   const toMs = (ts: number | null | undefined): number | null => {
@@ -64,6 +74,7 @@ async function main(): Promise<void> {
     model: modelName.name,
     modelVariant: modelName.variant,
     contextPercent,
+    contextTokens,
     agents,
     fiveHourPercent: data.rate_limits?.five_hour?.used_percentage ?? mmQuota?.fiveHourUsedPct ?? null,
     sevenDayPercent: data.rate_limits?.seven_day?.used_percentage ?? mmQuota?.sevenDayUsedPct ?? null,

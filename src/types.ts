@@ -38,6 +38,7 @@ export interface RenderData {
   model: string;
   modelVariant: string | null;
   contextPercent: number | null;
+  contextTokens: number | null;
   agents: AgentEntry[];
   fiveHourPercent: number | null;
   sevenDayPercent: number | null;

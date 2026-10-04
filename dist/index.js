@@ -38,6 +38,16 @@ async function main() {
     const contextPercent = usageUnavailable
         ? null
         : Math.round(cw.used_percentage);
+    // Tokens occupying the window — same input-side sum Claude Code derives
+    // used_percentage from; fall back to size × percent if the breakdown is absent.
+    const u = cw?.current_usage;
+    const contextTokens = usageUnavailable
+        ? null
+        : u
+            ? (u.input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0)
+            : cw?.context_window_size
+                ? Math.round((cw.context_window_size * cw.used_percentage) / 100)
+                : null;
     const { agents, effort } = await transcriptPromise;
     const toMs = (ts) => {
         if (ts == null)
@@ -54,6 +64,7 @@ async function main() {
         model: modelName.name,
         modelVariant: modelName.variant,
         contextPercent,
+        contextTokens,
         agents,
         fiveHourPercent: data.rate_limits?.five_hour?.used_percentage ?? mmQuota?.fiveHourUsedPct ?? null,
         sevenDayPercent: data.rate_limits?.seven_day?.used_percentage ?? mmQuota?.sevenDayUsedPct ?? null,

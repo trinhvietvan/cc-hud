@@ -10,24 +10,26 @@ const PEACH  = fg(216);  // #fab387 — warning
 const RED    = fg(211);  // #f38ba8 — critical
 const TEAL   = fg(115);  // #94e2d5 — agent accent
 const BLUE   = fg(111);  // #89b4fa — info accent
-const SAPPHIRE  = fg(117); // #74c7ec — countdown: plenty
-const LAVENDER  = fg(147); // #b4befe — countdown: moderate
-const FLAMINGO  = fg(224); // #f2cdcd — countdown: attention
-const MAROON    = fg(217); // #eba0ac — countdown: urgent
+const SAPPHIRE  = fg(117); // #74c7ec — reset time: plenty
+const LAVENDER  = fg(147); // #b4befe — reset time: moderate
+const FLAMINGO  = fg(224); // #f2cdcd — reset time: attention
+const MAROON    = fg(217); // #eba0ac — reset time: urgent
 const OVERLAY = fg(243); // #6c7086 — dim/separator
-const SURFACE = fg(238); // #313244 — bar track
 const TEXT   = fg(189);  // #cdd6f4 — primary text
 
-// — Bar config —
-const BAR_WIDTH = 10;
-const BLOCKS = [' ', '▏', '▎', '▍', '▌', '▋', '▊', '▉', '█'];
-const TRACK_CHAR = '░';
+const SEP = ` ${OVERLAY}|${RESET} `;
+const DOT = ` ${OVERLAY}·${RESET} `;
 
 function color(percent: number): string {
   if (percent <= 50) return GREEN;
   if (percent <= 70) return YELLOW;
   if (percent <= 85) return PEACH;
   return RED;
+}
+
+function pct(percent: number): string {
+  const clamped = Math.round(Math.max(0, Math.min(100, percent)));
+  return `${color(clamped)}${clamped}%${RESET}`;
 }
 
 // Reasoning effort ("思考深度") — capitalize the raw level for display.
@@ -38,31 +40,15 @@ function effortLabel(raw: string): string {
   return EFFORT_LABELS[raw] ?? raw.charAt(0).toUpperCase() + raw.slice(1);
 }
 
-function progressBar(percent: number | null): string {
-  // null = current_usage not yet populated (start of session or just after /compact)
-  // — render an empty track + dim em-dash so it doesn't look like context reset.
-  if (percent === null) {
-    return `${SURFACE}${TRACK_CHAR.repeat(BAR_WIDTH)}${RESET} ${OVERLAY}—%${RESET}`;
-  }
-
-  const clamped = Math.max(0, Math.min(100, percent));
-  const total = (clamped / 100) * BAR_WIDTH;
-  const full = Math.floor(total);
-  const frac = Math.round((total - full) * 8);
-  const empty = BAR_WIDTH - full - (frac > 0 ? 1 : 0);
-
-  const c = color(clamped);
-  const bar =
-    c + '█'.repeat(full) +
-    (frac > 0 ? BLOCKS[frac] : '') +
-    RESET + SURFACE +
-    TRACK_CHAR.repeat(Math.max(0, empty)) +
-    RESET;
-
-  return `${bar} ${c}${clamped}%${RESET}`;
+// 532 → "532", 500_000 → "500k", 1_250_000 → "1.3M"
+function formatTokens(n: number): string {
+  const trim = (s: string) => (s.endsWith('.0') ? s.slice(0, -2) : s);
+  if (n < 1000) return String(n);
+  if (n < 1_000_000) return `${trim((n / 1000).toFixed(n < 10_000 ? 1 : 0))}k`;
+  return `${trim((n / 1_000_000).toFixed(1))}M`;
 }
 
-function countdownColor(ms: number): string {
+function resetColor(ms: number): string {
   const hours = ms / 3_600_000;
   if (hours >= 24) return SAPPHIRE;
   if (hours >= 3)  return LAVENDER;
@@ -70,77 +56,91 @@ function countdownColor(ms: number): string {
   return MAROON;
 }
 
-function formatCountdown(resetsAt: number | null): { text: string; color: string } | null {
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+// Absolute local reset time: "21:30", or "04-Oct 21:30" when withDate.
+function formatReset(resetsAt: number | null, withDate: boolean): string | null {
   if (resetsAt == null) return null;
   const ms = resetsAt - Date.now();
   if (ms <= 0) return null;
-  const minutes = ms / 60_000;
-  const c = countdownColor(ms);
-  if (minutes < 60) return { text: `${Math.round(minutes)}m`, color: c };
-  const hours = ms / 3_600_000;
-  const fmtNum = (n: number) => { const r = n.toFixed(1); return r.endsWith('.0') ? r.slice(0, -2) : r; };
-  if (hours < 24) return { text: `${fmtNum(hours)}h`, color: c };
-  const days = ms / 86_400_000;
-  return { text: `${fmtNum(days)}d`, color: c };
+  const d = new Date(resetsAt);
+  const time = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  const text = withDate ? `${pad2(d.getDate())}-${MONTHS[d.getMonth()]} ${time}` : time;
+  return `${OVERLAY}Resets${RESET} ${resetColor(ms)}${text}${RESET}`;
 }
 
-function rateSegment(label: string, percent: number | null, resetsAt: number | null): string | null {
+function rateSegment(
+  icon: string,
+  label: string,
+  percent: number | null,
+  resetsAt: number | null,
+  withDate: boolean,
+): string | null {
   if (percent == null) return null;
-  const clamped = Math.round(Math.max(0, Math.min(100, percent)));
-  const c = color(clamped);
-  const cd = formatCountdown(resetsAt);
-  const suffix = cd ? ` ${OVERLAY}(${RESET}${cd.color}${cd.text}${RESET}${OVERLAY})${RESET}` : '';
-  return `${OVERLAY}${label}:${RESET}${c}${clamped}%${RESET}${suffix}`;
+  const reset = formatReset(resetsAt, withDate);
+  return `${icon} ${TEXT}${label}${RESET}${DOT}${pct(percent)}${reset ? DOT + reset : ''}`;
 }
 
 function agentSegment(agents: RenderData['agents']): string | null {
   if (agents.length === 0) return null;
   const parts = agents.slice(0, 3).map(a => {
-    const model = a.model ? ` ${OVERLAY}[${a.model}]${RESET}` : '';
-    return `${TEAL}◐${RESET} ${TEXT}${a.type}${RESET}${model}`;
+    const model = a.model ? ` ${OVERLAY}(${a.model})${RESET}` : '';
+    return `${TEAL}${a.type}${RESET}${model}`;
   });
-  return parts.join(' ');
+  return `🧩 ${parts.join(`${OVERLAY},${RESET} `)}`;
 }
 
 // The top-model gauge usually resets together with the 7d window —
-// suppress its countdown then, so the same time isn't printed twice.
+// suppress its reset time then, so the same time isn't printed twice.
 function sameReset(a: number | null, b: number | null): boolean {
   return a != null && b != null && Math.abs(a - b) < 60_000;
 }
 
+// 🤖 Opus 5.5 · 1M | 🧠 High | ⚡ 50% · 500k tokens | 🔥 5H · 12% · Resets 21:30 | ⚙️ 7D · 40% · Resets 04-Oct 21:30
 export function render(data: RenderData): string {
   const segments: string[] = [];
 
-  // Model + context bar (variant suffix lives here — it describes context capacity)
-  const variant = data.modelVariant ? ` ${OVERLAY}(${data.modelVariant})${RESET}` : '';
-  const depth = data.thinkingDepth ? ` ${OVERLAY}· ${effortLabel(data.thinkingDepth)}${RESET}` : '';
-  segments.push(`${OVERLAY}[${RESET}${BLUE}${data.model}${RESET}${depth}${OVERLAY}]${RESET} ${progressBar(data.contextPercent)}${variant}`);
+  const variant = data.modelVariant ? `${DOT}${TEXT}${data.modelVariant}${RESET}` : '';
+  segments.push(`🤖 ${BLUE}${data.model}${RESET}${variant}`);
 
-  // Agents (if any)
+  if (data.thinkingDepth) {
+    segments.push(`🧠 ${TEXT}${effortLabel(data.thinkingDepth)}${RESET}`);
+  }
+
+  // null = current_usage not yet populated (start of session or just after /compact)
+  // — show a dim em-dash so it doesn't look like the context just emptied.
+  if (data.contextPercent === null) {
+    segments.push(`⚡ ${OVERLAY}—%${RESET}`);
+  } else {
+    const tokens = data.contextTokens != null
+      ? `${DOT}${TEXT}${formatTokens(data.contextTokens)} tokens${RESET}`
+      : '';
+    segments.push(`⚡ ${pct(data.contextPercent)}${tokens}`);
+  }
+
   const agentStr = agentSegment(data.agents);
   if (agentStr) segments.push(agentStr);
 
-  // Rate limits: 5h │ 7d │ top-model weekly gauge
-  const rTop = data.topModel
-    ? rateSegment(
-        data.topModel.name,
-        data.topModel.percent,
-        sameReset(data.topModel.resetsAt, data.sevenDayResetsAt) ? null : data.topModel.resetsAt,
-      )
-    : null;
   const rates = [
-    rateSegment('5h', data.fiveHourPercent, data.fiveHourResetsAt),
-    rateSegment('7d', data.sevenDayPercent, data.sevenDayResetsAt),
-    rTop,
+    rateSegment('🔥', '5H', data.fiveHourPercent, data.fiveHourResetsAt, false),
+    rateSegment('⚙️', '7D', data.sevenDayPercent, data.sevenDayResetsAt, true),
+    data.topModel
+      ? rateSegment(
+          '🏆',
+          data.topModel.name,
+          data.topModel.percent,
+          sameReset(data.topModel.resetsAt, data.sevenDayResetsAt) ? null : data.topModel.resetsAt,
+          true,
+        )
+      : null,
   ].filter((s): s is string => s !== null);
-  if (rates.length > 0) {
-    segments.push(rates.join(` ${OVERLAY}│${RESET} `));
-  }
+  segments.push(...rates);
 
   // Extra (generic pluggable segment, e.g. balance for non-Anthropic backends)
   if (data.extra) {
-    segments.push(`${TEAL}${data.extra}${RESET}`);
+    segments.push(`💰 ${TEAL}${data.extra}${RESET}`);
   }
 
-  return segments.join(` ${OVERLAY}│${RESET} `);
+  return segments.join(SEP);
 }

@@ -24,7 +24,7 @@ src/
   index.ts                  — 入口：stdin → 解析 → 渲染 → stdout
   stdin.ts                  — 解析 stdin JSON
   transcript.ts             — 读 transcript JSONL 尾部 64KB，提取活跃 agent + 思考深度（effort）
-  render.ts                 — 单行紧凑渲染（1/8 精度进度条 + ANSI 颜色）
+  render.ts                 — 单行 emoji 布局渲染（🤖 模型 | 🧠 深度 | ⚡ 上下文+tokens | 🔥 5H | ⚙️ 7D，ANSI 颜色）
   model.ts                  — 模型名美化（claude-opus-4-7[1m] → Opus 4.7 (1M)）
   claude.ts                 — 顶级模型周用量（OAuth usage API）
   claude-refresh.ts         — 分离式刷新子进程入口（tick 内零网络，后台拉取写缓存）
