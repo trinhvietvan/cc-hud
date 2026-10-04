@@ -1,7 +1,7 @@
 import { readStdin } from './stdin.js';
 import { parseTranscript } from './transcript.js';
 import { render } from './render.js';
-import { shortModelName } from './model.js';
+import { shortModelName, contextVariant } from './model.js';
 import { getExtra } from './balance.js';
 import { getMmxQuota } from './mmx.js';
 import { getGlmBalance } from './glm.js';
@@ -62,7 +62,7 @@ async function main() {
     const plan = await planPromise;
     const renderData = {
         model: modelName.name,
-        modelVariant: modelName.variant,
+        modelVariant: modelName.variant ?? contextVariant(cw?.context_window_size),
         contextPercent,
         contextTokens,
         agents,
@@ -70,7 +70,9 @@ async function main() {
         sevenDayPercent: data.rate_limits?.seven_day?.used_percentage ?? mmQuota?.sevenDayUsedPct ?? null,
         fiveHourResetsAt: toMs(data.rate_limits?.five_hour?.resets_at) ?? mmQuota?.fiveHourResetsAt ?? null,
         sevenDayResetsAt: toMs(data.rate_limits?.seven_day?.resets_at) ?? mmQuota?.sevenDayResetsAt ?? null,
-        thinkingDepth: effort,
+        // stdin effort is live (reflects /effort immediately); the transcript only
+        // records it once the next turn completes, so it's the fallback for older builds.
+        thinkingDepth: data.effort?.level || effort,
         topModel: plan?.topModel ?? null,
         extra,
     };

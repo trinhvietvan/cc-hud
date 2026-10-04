@@ -85,7 +85,7 @@
 
 | Segment | Shows |
 | --- | --- |
-| `🤖 Opus 5.5 · 1M` | Model name, plus the context variant when present |
+| `🤖 Opus 5.5 · 1M` | Model name, plus `1M` when the context window is 1M tokens (from the model id's `[1m]` suffix or the reported window size) |
 | `🧠 High` | Thinking depth (reasoning effort) — hidden when the transcript carries none |
 | `⚡ 50% · 500k tokens` | Context window usage and the tokens currently in it; `⚡ —%` right after `/compact` until the next API call |
 | `🧩 Explore (haiku)` | Running subagents (up to 3), with model — only while any are running |
@@ -179,7 +179,7 @@ cc-hud shows your current **thinking depth** (the model's reasoning effort — `
 🤖 Fable 5 | 🧠 XHigh | ⚡ 18% · 180k tokens | 🔥 5H · 1% · Resets 22:15 | ⚙️ 7D · 35% · Resets 08-Oct 21:30 | 🏆 Fable · 51%
 ```
 
-- **Thinking depth** is read straight from the session transcript (the latest turn's `effort`) — **zero network**, works on every backend. The badge hides itself when the transcript carries no effort.
+- **Thinking depth** comes from the statusline JSON's `effort.level`, so it updates the moment you run `/effort`; older Claude Code builds fall back to the latest transcript turn's `effort`. **Zero network**, works on every backend. The segment hides itself when neither source carries an effort.
 - **Top-model gauge** comes from the same OAuth usage endpoint the `/usage` panel reads. The OAuth token is read locally (`~/.claude/.credentials.json`, or the macOS Keychain), used only for this read-only call, and never stored, logged, or refreshed.
 - Fetches run in a **detached background refresher** — a statusline tick never waits on the network. Results are cached for 5 minutes.
 - The gauge only activates on the official Anthropic backend with a subscription; API-key and third-party sessions skip it entirely.
@@ -235,7 +235,7 @@ Set the `CC_HUD_EXTRA_FILE` env var to any file whose first line is the text to 
 ```bash
 npm install
 npm run build      # compile TypeScript → dist/
-npm test           # 133 tests (node:test)
+npm test           # 135 tests (node:test)
 ```
 
 Project layout:

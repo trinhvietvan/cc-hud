@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { shortModelName } from '../dist/model.js';
+import { shortModelName, contextVariant } from '../dist/model.js';
 
 describe('shortModelName', () => {
   it('parses standard model id', () => {
@@ -109,5 +109,20 @@ describe('shortModelName', () => {
     // Some backends only send display_name, not id
     assert.deepEqual(shortModelName('glm-5.2[1m]'), { name: 'GLM 5.2', variant: '1M' });
     assert.deepEqual(shortModelName('glm-5-turbo'), { name: 'GLM 5 Turbo', variant: null });
+  });
+});
+
+describe('contextVariant', () => {
+  it('labels extended-context windows', () => {
+    assert.equal(contextVariant(1_000_000), '1M');
+    assert.equal(contextVariant(2_000_000), '2M');
+    assert.equal(contextVariant(1_500_000), '1.5M');
+  });
+
+  it('leaves standard or unknown windows unlabeled', () => {
+    assert.equal(contextVariant(200_000), null);
+    assert.equal(contextVariant(0), null);
+    assert.equal(contextVariant(null), null);
+    assert.equal(contextVariant(undefined), null);
   });
 });

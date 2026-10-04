@@ -23,7 +23,7 @@ commands/setup.md           — 安装配置命令（v0.5.0+ 写 launcher 到 ~/
 src/
   index.ts                  — 入口：stdin → 解析 → 渲染 → stdout
   stdin.ts                  — 解析 stdin JSON
-  transcript.ts             — 读 transcript JSONL 尾部 64KB，提取活跃 agent + 思考深度（effort）
+  transcript.ts             — 读 transcript JSONL 尾部 64KB，提取活跃 agent + 思考深度（effort，stdin effort.level 优先）
   render.ts                 — 单行 emoji 布局渲染（🤖 模型 | 🧠 深度 | ⚡ 上下文+tokens | 🔥 5H | ⚙️ 7D，ANSI 颜色）
   model.ts                  — 模型名美化（claude-opus-4-7[1m] → Opus 4.7 (1M)）
   claude.ts                 — 顶级模型周用量（OAuth usage API）

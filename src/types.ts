@@ -15,6 +15,8 @@ export interface StdinData {
     five_hour?: { used_percentage?: number | null; resets_at?: number | null } | null;
     seven_day?: { used_percentage?: number | null; resets_at?: number | null } | null;
   } | null;
+  // Live reasoning effort for this session — updates as soon as /effort changes it
+  effort?: { level?: string | null } | null;
   transcript_path?: string;
   cwd?: string;
 }
